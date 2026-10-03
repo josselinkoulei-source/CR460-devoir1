@@ -37,3 +37,5 @@ output "terraform_client_id" {
 output "terraform_principal_id" {
   value = data.azurerm_client_config.current.object_id
 }
+
+lecture du mot de passe VM depuis Azure Key Vault
