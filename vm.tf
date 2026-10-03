@@ -5,14 +5,14 @@ variable "vm_admin_password" {
 }
 
 resource "azurerm_subnet" "cr460_subnet" {
-  name                 = "snet-cr460-vm"
+  name                 = var.subnet_name
   resource_group_name  = azurerm_resource_group.cr460.name
   virtual_network_name = azurerm_virtual_network.cr460_vnet.name
   address_prefixes     = ["10.0.1.0/24"]
 }
 
 resource "azurerm_network_interface" "cr460_nic" {
-  name                = "nic-cr460-vm"
+  name                = var.nic_name
   location            = azurerm_resource_group.cr460.location
   resource_group_name = azurerm_resource_group.cr460.name
 
@@ -28,10 +28,10 @@ resource "azurerm_network_interface" "cr460_nic" {
 }
 
 resource "azurerm_linux_virtual_machine" "cr460_vm" {
-  name                = "vm-cr460-devoir1"
+  name                = var.vm_name
   resource_group_name = azurerm_resource_group.cr460.name
   location            = azurerm_resource_group.cr460.location
-  size                = "Standard_B2pts_v2"
+  size                = var.vm_size
 
   admin_username                  = "azureuser"
   admin_password                  = var.vm_admin_password
