@@ -1,9 +1,3 @@
-variable "vm_admin_password" {
-  description = "Mot de passe administrateur de la VM"
-  type        = string
-  sensitive   = true
-}
-
 resource "azurerm_subnet" "cr460_subnet" {
   name                 = var.subnet_name
   resource_group_name  = azurerm_resource_group.cr460.name
@@ -34,7 +28,7 @@ resource "azurerm_linux_virtual_machine" "cr460_vm" {
   size                = var.vm_size
 
   admin_username                  = "azureuser"
-  admin_password                  = var.vm_admin_password
+  admin_password                  = data.azurerm_key_vault_secret.cr460_vm_password.value
   disable_password_authentication = false
 
   network_interface_ids = [

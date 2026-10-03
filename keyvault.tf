@@ -17,6 +17,11 @@ resource "azurerm_key_vault" "cr460_kv" {
   }
 }
 
+data "azurerm_key_vault_secret" "cr460_vm_password" {
+  name         = "vm-admin-password"
+  key_vault_id = azurerm_key_vault.cr460_kv.id
+}
+
 output "key_vault_name" {
   value = azurerm_key_vault.cr460_kv.name
 }
