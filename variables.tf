@@ -51,3 +51,9 @@ variable "container_name" {
   type        = string
   default     = "cr460-web"
 }
+
+variable "key_vault_name" {
+  description = "Nom du coffre Azure Key Vault"
+  type        = string
+  default     = "kv-cr460-jkoulei-2026"
+}
