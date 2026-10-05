@@ -57,3 +57,10 @@ variable "key_vault_name" {
   type        = string
   default     = "kv-cr460-jkoulei-2026"
 }
+
+
+variable "acr_name" {
+  description = "Nom du registre Azure Container Registry"
+  type        = string
+  default     = "acrcr460jkoulei2026"
+}
