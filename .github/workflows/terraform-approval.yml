@@ -27,7 +27,7 @@ jobs:
     outputs:
       run_id: ${{ steps.plan_run.outputs.run_id }}
       run_link: ${{ steps.plan_run.outputs.run_link }}
-      confirmable: ${{ fromJSON(steps.plan_run.outputs.payload).data.attributes.actions.IsConfirmable }}
+      confirmable: ${{ steps.plan_run.outputs.payload != '' && fromJSON(steps.plan_run.outputs.payload).data.attributes.actions.IsConfirmable }}
 
     steps:
       - name: Recuperer le code
@@ -35,13 +35,36 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Verifier que Auto apply est desactive
+      - name: Verifier l'acces HCP et le mode manuel
         shell: bash
         run: |
+          set -euo pipefail
+
+          if [[ -z "${TF_API_TOKEN:-}" ]]; then
+            echo "::error::Le secret GitHub TF_API_TOKEN est absent ou vide."
+            exit 1
+          fi
+
+          response_file="$RUNNER_TEMP/hcp-workspace.json"
+
           curl --fail --silent --show-error \
+            --connect-timeout 15 --max-time 60 \
             --header "Authorization: Bearer $TF_API_TOKEN" \
-            "https://app.terraform.io/api/v2/organizations/$TF_CLOUD_ORGANIZATION/workspaces/$TF_WORKSPACE" \
-            | jq -e '.data.attributes["auto-apply"] == false'
+            --header "Accept: application/vnd.api+json" \
+            --output "$response_file" \
+            "https://app.terraform.io/api/v2/organizations/$TF_CLOUD_ORGANIZATION/workspaces/$TF_WORKSPACE"
+
+          if ! jq -e '.data.attributes["auto-apply"] | type == "boolean"' "$response_file" > /dev/null; then
+            echo "::error::La reponse HCP Terraform est invalide ou incomplete."
+            exit 1
+          fi
+
+          if ! jq -e '.data.attributes["auto-apply"] == false' "$response_file" > /dev/null; then
+            echo "::error::Auto apply est active. Choisis Manual apply dans HCP Terraform, Settings, General."
+            exit 1
+          fi
+
+          echo "Acces au workspace confirme. Auto apply est desactive."
 
       - name: Envoyer la configuration a HCP Terraform
         id: upload
