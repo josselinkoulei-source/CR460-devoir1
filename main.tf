@@ -22,7 +22,8 @@ resource "azurerm_resource_group" "cr460" {
   location = var.azure_region
 
   tags = {
-    Projet = "DevoirCR460"
+    Projet      = "DevoirCR460"
+    Approbation = "Manuelle"
   }
 }
 
