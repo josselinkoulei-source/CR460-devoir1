@@ -1,0 +1,83 @@
+name: Terraform - approbation manuelle
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: terraform-cr460-devoir1
+  cancel-in-progress: false
+
+env:
+  TF_CLOUD_ORGANIZATION: cr460-jkoulei-2026
+  TF_WORKSPACE: cr460-devoir1
+  TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
+
+jobs:
+  plan:
+    name: Terraform plan
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    outputs:
+      run_id: ${{ steps.plan_run.outputs.run_id }}
+      run_link: ${{ steps.plan_run.outputs.run_link }}
+      confirmable: ${{ fromJSON(steps.plan_run.outputs.payload).data.attributes.actions.IsConfirmable }}
+
+    steps:
+      - name: Recuperer le code
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Verifier que Auto apply est desactive
+        shell: bash
+        run: |
+          curl --fail --silent --show-error \
+            --header "Authorization: Bearer $TF_API_TOKEN" \
+            "https://app.terraform.io/api/v2/organizations/$TF_CLOUD_ORGANIZATION/workspaces/$TF_WORKSPACE" \
+            | jq -e '.data.attributes["auto-apply"] == false'
+
+      - name: Envoyer la configuration a HCP Terraform
+        id: upload
+        uses: hashicorp/tfc-workflows-github/actions/upload-configuration@v1.3.2
+        with:
+          workspace: ${{ env.TF_WORKSPACE }}
+          directory: ./
+          speculative: "false"
+
+      - name: Executer le plan dans HCP Terraform
+        id: plan_run
+        uses: hashicorp/tfc-workflows-github/actions/create-run@v1.3.2
+        with:
+          workspace: ${{ env.TF_WORKSPACE }}
+          configuration_version: ${{ steps.upload.outputs.configuration_version_id }}
+          plan_only: "false"
+
+      - name: Afficher le lien du plan
+        env:
+          RUN_LINK: ${{ steps.plan_run.outputs.run_link }}
+        run: |
+          echo "Plan a examiner : $RUN_LINK" >> "$GITHUB_STEP_SUMMARY"
+
+  apply:
+    name: Terraform apply apres approbation
+    needs: plan
+    if: needs.plan.outputs.confirmable == 'true'
+    runs-on: ubuntu-latest
+
+    environment:
+      name: production
+      url: ${{ needs.plan.outputs.run_link }}
+
+    steps:
+      - name: Appliquer le plan approuve
+        uses: hashicorp/tfc-workflows-github/actions/apply-run@v1.3.2
+        with:
+          run: ${{ needs.plan.outputs.run_id }}
+          comment: "Approbation manuelle obtenue dans GitHub Actions"
